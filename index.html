@@ -1,0 +1,464 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Fitness Tracker Sync</title>
+<style>
+/* Layout: one column, sticky header, tab bar, a big day counter, then one card per exercise. */
+:root{--bg:#f5f4ef;--card:#ffffff;--fg:#1c1d1a;--muted:#6a6b63;--line:#dcdad2;--accent:#2e6a4e;--accent-fg:#ffffff;--warn:#9a4a2a;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151613;--card:#1f211d;--fg:#ecebe5;--muted:#9d9e95;--line:#33362f;--accent:#7cc29f;--accent-fg:#10261b;--warn:#e89a78;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151613;--card:#1f211d;--fg:#ecebe5;--muted:#9d9e95;--line:#33362f;--accent:#7cc29f;--accent-fg:#10261b;--warn:#e89a78;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+*{box-sizing:border-box}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:14px 8px;border-bottom:1px solid var(--line);z-index:2}
+h1{font-size:19px;margin:0 0 2px;font-weight:650}
+h2{font-size:16px;margin:0 0 4px;font-weight:650}
+.muted{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto}
+.tabs button{flex:0 0 auto;border:1px solid var(--line);background:none;color:var(--fg);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+main{padding-block:16px 40px;max-width:720px;margin:0 auto;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;min-width:0}
+input,select{font:inherit;font-size:15px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:var(--accent);color:var(--accent-fg);border:0;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;cursor:pointer}
+.btn.ghost{background:none;color:var(--fg);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.daynav{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.daynav .big{font-size:26px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+.daynav .big input{font-size:26px;font-weight:700;text-align:center;padding:4px}
+.daynav .btn{padding:10px 16px;font-size:18px;line-height:1}
+.sets{display:grid;grid-template-columns:50px 1fr 1fr 60px 60px;gap:6px;align-items:center;margin-top:6px}
+.sets .hdr{font-size:12px;color:var(--muted)}
+.sets .lbl{font-size:13px;color:var(--muted)}
+.sets input{padding:7px 6px;text-align:center}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:4px}
+.status{font-size:13px;color:var(--muted);margin-left:8px}
+.warn{color:var(--warn)}
+.chk{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.chk input{width:20px;height:20px;flex:0 0 auto}
+.hidden{display:none}
+@media (max-width:440px){.sets{grid-template-columns:40px 1fr 1fr 52px 52px}.sets input{font-size:14px;padding:7px 4px}}
+</style>
+
+<header>
+  <h1>Fitness Tracker</h1>
+  <div class="muted" id="phaseLine">Set up in Settings to load your plan</div>
+  <div class="muted" id="syncLine" aria-live="polite"></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-view="today" aria-selected="true">Today</button>
+    <button role="tab" data-view="mobility" aria-selected="false">Mobility</button>
+    <button role="tab" data-view="body" aria-selected="false">Body</button>
+    <button role="tab" data-view="settings" aria-selected="false">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-today">
+    <div class="card daynav">
+      <button class="btn ghost" id="prevDay" aria-label="Previous day">−</button>
+      <div class="big">Day <input type="number" id="dayNum" min="0" max="111" inputmode="numeric" aria-label="Day number"></div>
+      <button class="btn ghost" id="nextDay" aria-label="Next day">+</button>
+    </div>
+    <div class="muted" style="margin:-6px 4px 12px;text-align:center" id="dayInfo"></div>
+    <div id="todayBody"></div>
+  </section>
+
+  <section id="view-mobility" class="hidden">
+    <div class="card">
+      <label class="field">Day number <input type="number" id="mobDay" min="0" max="111" inputmode="numeric"></label>
+      <div id="mobList"></div>
+      <label class="field" style="margin-top:12px">Minutes
+        <input type="number" id="mobMin" inputmode="numeric" min="0">
+      </label>
+      <label class="field">Notes <input type="text" id="mobNotes"></label>
+      <button class="btn" id="mobSave">Save mobility day</button>
+      <span class="status" id="mobStatus"></span>
+    </div>
+  </section>
+
+  <section id="view-body" class="hidden">
+    <div class="card">
+      <label class="field">Day number <input type="number" id="bodyDay" min="0" max="111" inputmode="numeric"></label>
+      <div class="two">
+        <label class="field">Bodyweight (lb)<input type="number" step="0.1" id="bw" inputmode="decimal"></label>
+        <label class="field">Resting HR<input type="number" id="rhr" inputmode="numeric"></label>
+        <label class="field">Waist (in)<input type="number" step="0.25" id="waist" inputmode="decimal"></label>
+        <label class="field">Chest (in)<input type="number" step="0.25" id="chest" inputmode="decimal"></label>
+        <label class="field">Upper arm (in)<input type="number" step="0.25" id="arm" inputmode="decimal"></label>
+        <label class="field">Thigh (in)<input type="number" step="0.25" id="thigh" inputmode="decimal"></label>
+      </div>
+      <label class="field">Notes <input type="text" id="bodyNotes"></label>
+      <button class="btn" id="bodySave">Save measurements</button>
+      <span class="status" id="bodyStatus"></span>
+    </div>
+  </section>
+
+  <section id="view-settings" class="hidden">
+    <div class="card">
+      <h2>Connect to your sheet</h2>
+      <ol class="muted" style="padding-left:18px;margin:6px 0 12px">
+        <li>In the tracker sheet, open Extensions &gt; Apps Script. Delete the starter code and paste the script below.</li>
+        <li>Click Deploy &gt; New deployment &gt; type Web app. Set Execute as: Me and Who has access: Anyone. Click Deploy and copy the Web app URL.</li>
+        <li>Paste the URL below, then click Save.</li>
+      </ol>
+      <label class="field">Web app URL<input type="url" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <label class="field">Day 0 (start date)<input type="date" id="cfgStart"></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="cfgSave">Save settings</button>
+        <button class="btn ghost" id="syncNow">Sync now</button>
+        <button class="btn ghost" id="copyGs">Copy Apps Script</button>
+      </div>
+      <p class="muted" id="cfgMsg" style="margin-top:10px"></p>
+    </div>
+    <div class="card">
+      <h2>Program schedule (counted from Day 0)</h2>
+      <p class="muted" style="margin:0 0 8px">Days run 0 to 111, which is 16 weeks.<br>Phase 1: Days 0-41 (Weeks 1-6).<br>Phase 2: Days 42-76 (Weeks 7-11).<br>Phase 3: Days 77-111 (Weeks 12-16).</p>
+      <p class="muted" style="margin:0 0 8px">Phase 2 and 3 boundaries are assumed. Tell me if yours differ.</p>
+      <p class="muted" style="margin:0">Every 7 days repeat this pattern:<br>
+        Day 0 of each block: Lift A<br>
+        Day 1: Lift B<br>
+        Day 2: off (Phase 3 Zone 2 cardio)<br>
+        Day 3: Lift C<br>
+        Day 4: Lift D<br>
+        Day 5 and Day 6: cardio (Phase 2 run/walk, Phase 3 Zone 2)<br>
+        Phase 1 has no cardio. There are no missed-day counts, so you can log any day number at any time.</p>
+    </div>
+    <div class="card">
+      <h2>Privacy</h2>
+      <p class="muted" style="margin:0">The web app URL is stored only in this browser. Anyone who has the URL can add rows to your sheet, so keep it private.</p>
+    </div>
+    <script type="text/plain" id="gsCode">// Fitness Tracker sync. Paste into Extensions > Apps Script of the tracker sheet.
+// Deploy: Deploy > New deployment > Web app > Execute as: Me > Who has access: Anyone.
+
+function doGet(e) {
+  if (e.parameter.action === 'plan') return out_({ plan: getPlan_() });
+  if (e.parameter.action === 'targets') return out_({ targets: getTargets_() });
+  return out_({ error: 'unknown action' });
+}
+
+function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  var done = [];
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    (body.items || []).forEach(function (item) {
+      try {
+        if (item.type === 'set') saveSet_(item);
+        if (item.type === 'mobility') saveMobility_(item.data);
+        if (item.type === 'body') saveBody_(item.data);
+        done.push(item.id);
+      } catch (err) {
+        // Not marked done, so the page will retry it on the next sync.
+      }
+    });
+  } finally {
+    lock.releaseLock();
+  }
+  return out_({ ok: true, done: done });
+}
+
+function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function sheet_(name) { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name); }
+function dateObj_(s) { return new Date(s + 'T12:00:00'); }
+function key_(v) { return v instanceof Date ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd') : String(v); }
+
+function getPlan_() {
+  var sh = sheet_('Plan');
+  var n = sh.getLastRow() - 1;
+  return sh.getRange(2, 1, n, 9).getDisplayValues()
+    .filter(function (r) { return r[0] !== ''; })
+    .map(function (r) {
+      return { day: r[0], num: r[1], name: r[2], equipment: r[3], sets: r[4], reps: r[5], tempo: r[6], rest: r[7], load: r[8] };
+    });
+}
+
+function getTargets_() {
+  var sh = sheet_('Dashboard');
+  var n = sh.getLastRow() - 1;
+  var out = {};
+  sh.getRange(2, 1, n, 7).getDisplayValues().forEach(function (r) {
+    if (r[0]) out[r[0]] = r[6];
+  });
+  return out;
+}
+
+// Fills the first pre-filled Log row that matches day, exercise and set and has no date yet.
+// Otherwise appends a new row. The sync tag in column J stops duplicates on retry.
+function saveSet_(item) {
+  var d = item.data;
+  var sh = sheet_('Log');
+  var tag = 'sync:' + item.id;
+  var n = Math.max(sh.getLastRow() - 1, 0);
+  var rows = n ? sh.getRange(2, 1, n, 10).getValues() : [];
+  if (rows.some(function (r) { return r[9] === tag; })) return;
+  var idx = rows.findIndex(function (r) {
+    return r[0] === '' && r[2] === d.day && r[3] === d.exercise && String(r[4]) === String(d.set);
+  });
+  var vals = [[
+    dateObj_(d.date), Number(d.week), d.day, d.exercise, Number(d.set),
+    d.reps, d.weight === '' ? '' : Number(d.weight), d.rpe === '' ? '' : Number(d.rpe),
+    d.pain === '' ? '' : Number(d.pain), tag
+  ]];
+  if (idx >= 0) sh.getRange(idx + 2, 1, 1, 10).setValues(vals);
+  else sh.getRange(sh.getLastRow() + 1, 1, 1, 10).setValues(vals);
+}
+
+// Updates the row for that date if it exists, otherwise appends one.
+function upsert_(sh, date, vals) {
+  var n = Math.max(sh.getLastRow() - 1, 0);
+  if (n) {
+    var dates = sh.getRange(2, 1, n, 1).getValues();
+    for (var i = 0; i < dates.length; i++) {
+      if (key_(dates[i][0]) === date) {
+        sh.getRange(i + 2, 1, 1, vals.length).setValues([vals]);
+        return;
+      }
+    }
+  }
+  sh.getRange(sh.getLastRow() + 1, 1, 1, vals.length).setValues([vals]);
+}
+
+function saveMobility_(d) {
+  upsert_(sheet_('Mobility'), d.date, [dateObj_(d.date)].concat(d.checks, [d.minutes === '' ? '' : Number(d.minutes), d.notes || '']));
+}
+
+function saveBody_(d) {
+  var num = function (v) { return v === '' || v == null ? '' : Number(v); };
+  upsert_(sheet_('Body'), d.date, [dateObj_(d.date), num(d.bodyweight), num(d.waist), num(d.chest), num(d.upper_arm), num(d.thigh), num(d.rhr), d.notes || '']);
+}
+</script>
+  </section>
+</main>
+
+<script>
+(function () {
+  var TOTAL_DAYS = 112;
+  var PHASE_END_WEEK = { 1: 6, 2: 11, 3: 16 };
+  var PHASE_PREFIX = { 1: '', 2: 'P2 ', 3: 'P3 ' };
+  // Position within each 7-day block, counted from Day 0.
+  var LIFT_AT = { 0: 'A', 1: 'B', 3: 'C', 4: 'D' };
+  var RUNWALK = 'Cardio: run/walk, 1 min jog then 2 min walk, 20 min total. Keep heart rate under 145 BPM.';
+  var ZONE2 = 'Cardio: Zone 2 run at 135-150 BPM, 3-6 miles.';
+  var CARDIO = { 2: { 5: RUNWALK, 6: RUNWALK }, 3: { 2: ZONE2, 5: ZONE2, 6: ZONE2 } };
+  var MOBILITY = ['Iron Neck 360 (8/dir)', 'Cat-Cow (5)', "Child's Pose Lat Reach (5/side)", 'Couch Stretch - Bench (2x45s/side)', 'Couch Stretch - Wall (2x45s/side)', 'Pec Stretch on Rack (2x30s/side)', 'Scap Wall Slide Flat (2x12)', 'Scap Wall Slide + Band (2x10)'];
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+  function todayISO() { return iso(new Date()); }
+
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  var cfg = store.get('ft_cfg', { url: '', start: '2026-11-03' });
+  var plan = store.get('ft_plan', []);
+  var targets = store.get('ft_targets', {});
+  var queue = store.get('ft_queue', []);
+
+  // Day numbers are whole days since Day 0.
+  function dayFromDate(date) {
+    return Math.floor((new Date(date + 'T12:00:00') - new Date(cfg.start + 'T12:00:00')) / 86400000);
+  }
+  function dateFromDay(n) {
+    var d = new Date(cfg.start + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return iso(d);
+  }
+  function currentDay() { return Math.max(0, dayFromDate(todayISO())); }
+  function weekOf(n) { return Math.min(16, Math.floor(n / 7) + 1); }
+  function phaseOf(week) { return week <= PHASE_END_WEEK[1] ? 1 : week <= PHASE_END_WEEK[2] ? 2 : 3; }
+  function clampDay(n) { return Math.min(TOTAL_DAYS - 1, Math.max(0, Number(n) || 0)); }
+
+  var selectedDay = currentDay();
+
+  function renderToday() {
+    var n = selectedDay;
+    var date = dateFromDay(n);
+    var week = weekOf(n), phase = phaseOf(week);
+    var pos = n % 7;
+    $('dayNum').value = n;
+    $('phaseLine').textContent = 'Day ' + n + ' of ' + (TOTAL_DAYS - 1) + ' · Week ' + week + ' · Phase ' + phase;
+    $('dayInfo').textContent = date;
+    var box = $('todayBody');
+    box.innerHTML = '';
+    if (!plan.length) {
+      box.innerHTML = '<div class="card muted">Open Settings and add your web app URL to load the plan.</div>';
+      return;
+    }
+    var letter = LIFT_AT[pos];
+    var cardio = CARDIO[phase] && CARDIO[phase][pos];
+    if (!letter) {
+      box.innerHTML = '<div class="card"><h2>Off day</h2><p class="muted" style="margin:0">' + (cardio ? esc(cardio) : 'Nothing scheduled. Rest and recover.') + '</p></div>';
+      return;
+    }
+    var key = PHASE_PREFIX[phase] + 'Day ' + letter;
+    var exs = plan.filter(function (p) { return p.day === key; });
+    if (cardio) box.insertAdjacentHTML('beforeend', '<div class="card muted">' + esc(cardio) + '</div>');
+    exs.forEach(function (p) { box.appendChild(exerciseCard(p, key, date, week)); });
+  }
+
+  function exerciseCard(p, key, date, week) {
+    var target = targets[p.name];
+    var hasTarget = target !== undefined && target !== '';
+    var n = parseInt(p.sets, 10) || 3;
+    var rows = '<div class="sets hdr"><span></span><span>Reps</span><span>Weight</span><span>RPE</span><span>Pain</span></div>';
+    for (var s = 1; s <= n; s++) {
+      rows += '<div class="sets"><span class="lbl">Set ' + s + '</span>' +
+        '<input inputmode="numeric" data-f="reps" aria-label="Set ' + s + ' reps">' +
+        '<input inputmode="decimal" data-f="weight" value="' + esc(hasTarget ? target : '') + '" aria-label="Set ' + s + ' weight">' +
+        '<input inputmode="numeric" data-f="rpe" aria-label="Set ' + s + ' RPE">' +
+        '<input inputmode="numeric" data-f="pain" aria-label="Set ' + s + ' pain">' +
+        '</div>';
+    }
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<h2>' + esc(p.name) + '</h2>' +
+      '<div class="muted">' + esc(p.equipment) + '</div>' +
+      '<div class="muted">' + esc(p.sets) + ' sets · ' + esc(p.reps) + ' reps · rest ' + esc(p.rest) + ' · tempo ' + esc(p.tempo) + '</div>' +
+      '<div class="muted">Start: ' + esc(p.load) + ' · Next target: ' + (hasTarget ? esc(target) + ' lb' : 'not set yet') + '</div>' +
+      '<div style="margin-top:8px">' + rows + '</div>' +
+      '<div style="margin-top:10px"><button class="btn" data-save>Save ' + esc(p.name) + '</button><span class="status" data-status></span></div>';
+    var btn = card.querySelector('[data-save]');
+    var st = card.querySelector('[data-status]');
+    btn.onclick = function () {
+      var count = 0;
+      card.querySelectorAll('.sets:not(.hdr)').forEach(function (row, i) {
+        var g = function (f) { return row.querySelector('[data-f="' + f + '"]').value.trim(); };
+        var reps = g('reps');
+        if (!reps) return;
+        queue.push({ id: uid(), type: 'set', data: { date: date, week: week, day: key, exercise: p.name, set: i + 1, reps: reps, weight: g('weight'), rpe: g('rpe'), pain: g('pain') } });
+        count++;
+      });
+      if (!count) { st.textContent = 'Enter reps for at least one set.'; st.classList.add('warn'); return; }
+      st.classList.remove('warn');
+      store.set('ft_queue', queue);
+      st.textContent = 'Saved ' + count + ' set(s) on this device.';
+      btn.disabled = true;
+      sync();
+    };
+    card.addEventListener('input', function () { btn.disabled = false; });
+    return card;
+  }
+
+  function renderMobility() {
+    $('mobList').innerHTML = MOBILITY.map(function (m, i) {
+      return '<label class="chk"><input type="checkbox" data-m="' + i + '"><span>' + esc(m) + '</span></label>';
+    }).join('');
+  }
+
+  function setSync(msg) { $('syncLine').textContent = msg; }
+
+  var syncing = false;
+  async function sync() {
+    if (!cfg.url) { setSync('Not connected. Add your web app URL in Settings.'); return; }
+    if (syncing) return;
+    if (!queue.length) { setSync('All data synced.'); await refreshPlan(); return; }
+    syncing = true;
+    setSync('Syncing ' + queue.length + ' item(s)…');
+    try {
+      var res = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ items: queue }) });
+      var j = await res.json();
+      if (j.error) throw new Error(j.error);
+      var done = {};
+      (j.done || []).forEach(function (id) { done[id] = true; });
+      queue = queue.filter(function (q) { return !done[q.id]; });
+      store.set('ft_queue', queue);
+      if (queue.length) setSync(queue.length + ' item(s) waiting to sync. Will retry.');
+      else { setSync('All data synced at ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })); await refreshPlan(); }
+    } catch (err) {
+      setSync('Saved on this device. Will retry (' + err.message + ').');
+    } finally {
+      syncing = false;
+    }
+  }
+
+  async function refreshPlan() {
+    if (!cfg.url) return;
+    try {
+      var p = await (await fetch(cfg.url + '?action=plan')).json();
+      var t = await (await fetch(cfg.url + '?action=targets')).json();
+      if (p.plan) { plan = p.plan; store.set('ft_plan', plan); }
+      if (t.targets) { targets = t.targets; store.set('ft_targets', targets); }
+      renderToday();
+    } catch (err) {}
+  }
+
+  function queueItem(type, data, msgEl) {
+    queue.push({ id: uid(), type: type, data: data });
+    store.set('ft_queue', queue);
+    msgEl.textContent = 'Saved on this device.';
+    sync();
+  }
+
+  function dayFieldValue(id) {
+    var v = $(id).value;
+    return v === '' ? selectedDay : clampDay(v);
+  }
+
+  $('mobSave').onclick = function () {
+    var checks = [];
+    document.querySelectorAll('[data-m]').forEach(function (cb) { checks.push(cb.checked); });
+    queueItem('mobility', { date: dateFromDay(dayFieldValue('mobDay')), checks: checks, minutes: $('mobMin').value, notes: $('mobNotes').value }, $('mobStatus'));
+  };
+
+  $('bodySave').onclick = function () {
+    queueItem('body', {
+      date: dateFromDay(dayFieldValue('bodyDay')), bodyweight: $('bw').value, rhr: $('rhr').value,
+      waist: $('waist').value, chest: $('chest').value, upper_arm: $('arm').value, thigh: $('thigh').value,
+      notes: $('bodyNotes').value
+    }, $('bodyStatus'));
+  };
+
+  $('cfgSave').onclick = function () {
+    cfg = { url: $('cfgUrl').value.trim(), start: $('cfgStart').value || cfg.start };
+    store.set('ft_cfg', cfg);
+    $('cfgMsg').textContent = 'Saved. Syncing…';
+    selectedDay = currentDay();
+    renderToday();
+    sync();
+  };
+
+  $('syncNow').onclick = function () { sync(); };
+
+  $('copyGs').onclick = function () {
+    var text = $('gsCode').textContent;
+    navigator.clipboard.writeText(text).then(function () { $('cfgMsg').textContent = 'Apps Script copied.'; }, function () {
+      var r = document.createRange(); r.selectNodeContents($('gsCode'));
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      $('cfgMsg').textContent = 'Copy blocked here. The code is selected; press Ctrl+C or Cmd+C.';
+    });
+  };
+
+  document.querySelectorAll('[data-view]').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      ['today', 'mobility', 'body', 'settings'].forEach(function (v) { $('view-' + v).classList.toggle('hidden', v !== b.dataset.view); });
+    };
+  });
+
+  function setDay(n) {
+    selectedDay = clampDay(n);
+    renderToday();
+  }
+  $('prevDay').onclick = function () { setDay(selectedDay - 1); };
+  $('nextDay').onclick = function () { setDay(selectedDay + 1); };
+  $('dayNum').onchange = function () { setDay($('dayNum').value === '' ? selectedDay : $('dayNum').value); };
+
+  // Initial values
+  $('cfgUrl').value = cfg.url;
+  $('cfgStart').value = cfg.start;
+  $('mobDay').value = selectedDay;
+  $('bodyDay').value = selectedDay;
+  renderMobility();
+  renderToday();
+  sync();
+
+  // Scheduled sync: retries queued data every 15 minutes while the page is open, and when the connection returns.
+  setInterval(sync, 15 * 60 * 1000);
+  window.addEventListener('online', sync);
+})();
+</script>
