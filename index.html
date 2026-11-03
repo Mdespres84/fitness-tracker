@@ -1,52 +1,67 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Fitness Tracker Sync</title>
 <style>
-/* Layout: one column, sticky header, tab bar, a big day counter, then one card per exercise. */
-:root{--bg:#f5f4ef;--card:#ffffff;--fg:#1c1d1a;--muted:#6a6b63;--line:#dcdad2;--accent:#2e6a4e;--accent-fg:#ffffff;--warn:#9a4a2a;color-scheme:light}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#151613;--card:#1f211d;--fg:#ecebe5;--muted:#9d9e95;--line:#33362f;--accent:#7cc29f;--accent-fg:#10261b;--warn:#e89a78;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#151613;--card:#1f211d;--fg:#ecebe5;--muted:#9d9e95;--line:#33362f;--accent:#7cc29f;--accent-fg:#10261b;--warn:#e89a78;color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+/* Layout: sticky header with a day counter, one column of cards: daily mobility, then the day's lifts. */
+:root{--bg:#f4f3ee;--card:#ffffff;--fg:#1d1e1b;--muted:#6d6e66;--line:#e4e2da;--accent:#2f6b50;--accent-soft:#e3efe8;--accent-fg:#ffffff;--warn:#9a4a2a;--radius:14px;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121410;--card:#1c1f1a;--fg:#eceae3;--muted:#9b9d93;--line:#2e322b;--accent:#86c9a6;--accent-soft:#213228;--accent-fg:#0f2318;--warn:#ec9f7f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121410;--card:#1c1f1a;--fg:#eceae3;--muted:#9b9d93;--line:#2e322b;--accent:#86c9a6;--accent-soft:#213228;--accent-fg:#0f2318;--warn:#ec9f7f;color-scheme:dark}
 *{box-sizing:border-box}
-header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:14px 8px;border-bottom:1px solid var(--line);z-index:2}
-h1{font-size:19px;margin:0 0 2px;font-weight:650}
-h2{font-size:16px;margin:0 0 4px;font-weight:650}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-font-smoothing:antialiased}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 10px}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-size:18px;margin:0;font-weight:650;letter-spacing:-.01em}
+.phase{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.progress{height:4px;background:var(--line);border-radius:4px;margin-top:10px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);width:0}
+.tabs{display:flex;gap:6px;margin-top:12px}
+.tabs button{flex:1;border:0;background:var(--card);color:var(--muted);border-radius:10px;padding:9px 0;font:inherit;font-size:14px;font-weight:550;cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--accent)}
+main{padding-block:8px 48px;max-width:680px;margin:0 auto;min-width:0}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 0 var(--line);min-width:0}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 4px}
+h2{font-size:16px;margin:0;font-weight:650}
 .muted{color:var(--muted);font-size:13px}
-.tabs{display:flex;gap:6px;margin-top:10px;overflow-x:auto}
-.tabs button{flex:0 0 auto;border:1px solid var(--line);background:none;color:var(--fg);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
-main{padding-block:16px 40px;max-width:720px;margin:0 auto;min-width:0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px;min-width:0}
-input,select{font:inherit;font-size:15px;padding:8px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
-input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+.daynav{display:grid;grid-template-columns:52px 1fr 52px;gap:10px;align-items:center;text-align:center}
+.daynav .num{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.daynav .num input{width:120px;font:inherit;font-size:34px;font-weight:700;text-align:center;background:transparent;color:var(--fg);border:0;border-bottom:2px solid var(--line);padding:0}
+.daynav .num input:focus{outline:none;border-bottom-color:var(--accent)}
+.round{width:52px;height:52px;border-radius:50%;border:0;background:var(--accent-soft);color:var(--fg);font-size:22px;cursor:pointer}
+.round:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{background:var(--accent);color:var(--accent-fg);border:0;border-radius:8px;padding:9px 14px;font:inherit;font-size:14px;cursor:pointer}
-.btn.ghost{background:none;color:var(--fg);border:1px solid var(--line)}
-.btn:disabled{opacity:.5;cursor:default}
-.daynav{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
-.daynav .big{font-size:26px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
-.daynav .big input{font-size:26px;font-weight:700;text-align:center;padding:4px}
-.daynav .btn{padding:10px 16px;font-size:18px;line-height:1}
-.sets{display:grid;grid-template-columns:50px 1fr 1fr 60px 60px;gap:6px;align-items:center;margin-top:6px}
-.sets .hdr{font-size:12px;color:var(--muted)}
+.btn{background:var(--accent);color:var(--accent-fg);border:0;border-radius:10px;padding:11px 16px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+.chk{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.chk:first-of-type{border-top:0}
+.chk input{width:20px;height:20px;accent-color:var(--accent);flex:0 0 auto;margin:0}
+.chk.done span{color:var(--muted);text-decoration:line-through}
+.ex{padding-block:4px}
+.ex + .ex{border-top:1px solid var(--line);margin-top:14px;padding-top:18px}
+.meta{font-size:13px;color:var(--muted);margin-top:2px}
+.target{display:inline-block;font-size:12px;font-weight:600;background:var(--accent-soft);color:var(--fg);padding:2px 9px;border-radius:999px;margin-top:6px}
+.sets{display:grid;grid-template-columns:44px 1fr 1fr 56px 56px;gap:6px;align-items:center;margin-top:8px}
+.sets.hdr{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:12px}
 .sets .lbl{font-size:13px;color:var(--muted)}
-.sets input{padding:7px 6px;text-align:center}
-.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:4px}
-.status{font-size:13px;color:var(--muted);margin-left:8px}
-.warn{color:var(--warn)}
-.chk{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
-.chk input{width:20px;height:20px;flex:0 0 auto}
+.sets input{padding:8px 4px;text-align:center;font-variant-numeric:tabular-nums}
+.row-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.status{font-size:13px;color:var(--muted)}
+.status.warn{color:var(--warn)}
+.cardio{background:var(--accent-soft);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:14px}
 .hidden{display:none}
-@media (max-width:440px){.sets{grid-template-columns:40px 1fr 1fr 52px 52px}.sets input{font-size:14px;padding:7px 4px}}
+.sync{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+@media (max-width:440px){.sets{grid-template-columns:36px 1fr 1fr 50px 50px;gap:5px}.sets input{font-size:14px;padding:8px 2px}}
 </style>
 
 <header>
-  <h1>Fitness Tracker</h1>
-  <div class="muted" id="phaseLine">Set up in Settings to load your plan</div>
-  <div class="muted" id="syncLine" aria-live="polite"></div>
+  <div class="top">
+    <h1>Fitness Tracker</h1>
+    <div class="phase" id="phaseLine">Set up in Settings</div>
+  </div>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-view="today" aria-selected="true">Today</button>
-    <button role="tab" data-view="mobility" aria-selected="false">Mobility</button>
     <button role="tab" data-view="body" aria-selected="false">Body</button>
     <button role="tab" data-view="settings" aria-selected="false">Settings</button>
   </nav>
@@ -55,77 +70,84 @@ label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
 <main>
   <section id="view-today">
     <div class="card daynav">
-      <button class="btn ghost" id="prevDay" aria-label="Previous day">−</button>
-      <div class="big">Day <input type="number" id="dayNum" min="0" max="111" inputmode="numeric" aria-label="Day number"></div>
-      <button class="btn ghost" id="nextDay" aria-label="Next day">+</button>
+      <button class="round" id="prevDay" aria-label="Previous day">‹</button>
+      <div>
+        <div class="eyebrow">Day</div>
+        <div class="num"><input type="number" id="dayNum" min="0" max="111" inputmode="numeric" aria-label="Day number"></div>
+        <div class="muted" id="dayInfo"></div>
+      </div>
+      <button class="round" id="nextDay" aria-label="Next day">›</button>
     </div>
-    <div class="muted" style="margin:-6px 4px 12px;text-align:center" id="dayInfo"></div>
-    <div id="todayBody"></div>
-  </section>
 
-  <section id="view-mobility" class="hidden">
-    <div class="card">
-      <label class="field">Day number <input type="number" id="mobDay" min="0" max="111" inputmode="numeric"></label>
-      <div id="mobList"></div>
-      <label class="field" style="margin-top:12px">Minutes
-        <input type="number" id="mobMin" inputmode="numeric" min="0">
-      </label>
-      <label class="field">Notes <input type="text" id="mobNotes"></label>
-      <button class="btn" id="mobSave">Save mobility day</button>
-      <span class="status" id="mobStatus"></span>
+    <div class="card" id="mobCard">
+      <div class="eyebrow">Every day · 10 minutes</div>
+      <h2>Mobility routine</h2>
+      <div id="mobList" style="margin-top:8px"></div>
+      <div class="two" style="margin-top:14px">
+        <label class="field" style="margin:0">Minutes<input type="number" id="mobMin" inputmode="numeric" min="0"></label>
+        <label class="field" style="margin:0">Notes<input type="text" id="mobNotes"></label>
+      </div>
+      <div class="row-actions">
+        <button class="btn" id="mobSave">Save mobility</button>
+        <span class="status" id="mobStatus"></span>
+      </div>
     </div>
+
+    <div id="cardioBox"></div>
+    <div id="todayBody"></div>
   </section>
 
   <section id="view-body" class="hidden">
     <div class="card">
-      <label class="field">Day number <input type="number" id="bodyDay" min="0" max="111" inputmode="numeric"></label>
-      <div class="two">
-        <label class="field">Bodyweight (lb)<input type="number" step="0.1" id="bw" inputmode="decimal"></label>
-        <label class="field">Resting HR<input type="number" id="rhr" inputmode="numeric"></label>
-        <label class="field">Waist (in)<input type="number" step="0.25" id="waist" inputmode="decimal"></label>
-        <label class="field">Chest (in)<input type="number" step="0.25" id="chest" inputmode="decimal"></label>
-        <label class="field">Upper arm (in)<input type="number" step="0.25" id="arm" inputmode="decimal"></label>
-        <label class="field">Thigh (in)<input type="number" step="0.25" id="thigh" inputmode="decimal"></label>
+      <div class="eyebrow">Weekly check-in</div>
+      <h2>Body measurements</h2>
+      <div style="margin-top:12px">
+        <label class="field">Day number<input type="number" id="bodyDay" min="0" max="111" inputmode="numeric"></label>
+        <div class="two">
+          <label class="field">Bodyweight (lb)<input type="number" step="0.1" id="bw" inputmode="decimal"></label>
+          <label class="field">Resting HR<input type="number" id="rhr" inputmode="numeric"></label>
+          <label class="field">Waist (in)<input type="number" step="0.25" id="waist" inputmode="decimal"></label>
+          <label class="field">Chest (in)<input type="number" step="0.25" id="chest" inputmode="decimal"></label>
+          <label class="field">Upper arm (in)<input type="number" step="0.25" id="arm" inputmode="decimal"></label>
+          <label class="field">Thigh (in)<input type="number" step="0.25" id="thigh" inputmode="decimal"></label>
+        </div>
+        <label class="field">Notes<input type="text" id="bodyNotes"></label>
       </div>
-      <label class="field">Notes <input type="text" id="bodyNotes"></label>
-      <button class="btn" id="bodySave">Save measurements</button>
-      <span class="status" id="bodyStatus"></span>
+      <div class="row-actions">
+        <button class="btn" id="bodySave">Save measurements</button>
+        <span class="status" id="bodyStatus"></span>
+      </div>
     </div>
   </section>
 
   <section id="view-settings" class="hidden">
     <div class="card">
-      <h2>Connect to your sheet</h2>
-      <ol class="muted" style="padding-left:18px;margin:6px 0 12px">
+      <div class="eyebrow">Connection</div>
+      <h2>Google Sheet</h2>
+      <ol class="muted" style="padding-left:18px;margin:10px 0 14px">
         <li>In the tracker sheet, open Extensions &gt; Apps Script. Delete the starter code and paste the script below.</li>
         <li>Click Deploy &gt; New deployment &gt; type Web app. Set Execute as: Me and Who has access: Anyone. Click Deploy and copy the Web app URL.</li>
         <li>Paste the URL below, then click Save.</li>
       </ol>
       <label class="field">Web app URL<input type="url" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
       <label class="field">Day 0 (start date)<input type="date" id="cfgStart"></label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="row-actions" style="margin-top:4px">
         <button class="btn" id="cfgSave">Save settings</button>
         <button class="btn ghost" id="syncNow">Sync now</button>
         <button class="btn ghost" id="copyGs">Copy Apps Script</button>
       </div>
-      <p class="muted" id="cfgMsg" style="margin-top:10px"></p>
+      <p class="muted" id="cfgMsg" style="margin:12px 0 0"></p>
     </div>
     <div class="card">
-      <h2>Program schedule (counted from Day 0)</h2>
-      <p class="muted" style="margin:0 0 8px">Days run 0 to 111, which is 16 weeks.<br>Phase 1: Days 0-41 (Weeks 1-6).<br>Phase 2: Days 42-76 (Weeks 7-11).<br>Phase 3: Days 77-111 (Weeks 12-16).</p>
-      <p class="muted" style="margin:0 0 8px">Phase 2 and 3 boundaries are assumed. Tell me if yours differ.</p>
-      <p class="muted" style="margin:0">Every 7 days repeat this pattern:<br>
-        Day 0 of each block: Lift A<br>
-        Day 1: Lift B<br>
-        Day 2: off (Phase 3 Zone 2 cardio)<br>
-        Day 3: Lift C<br>
-        Day 4: Lift D<br>
-        Day 5 and Day 6: cardio (Phase 2 run/walk, Phase 3 Zone 2)<br>
-        Phase 1 has no cardio. There are no missed-day counts, so you can log any day number at any time.</p>
+      <div class="eyebrow">Schedule</div>
+      <h2>Counted from Day 0</h2>
+      <p class="muted" style="margin:10px 0 0">Days 0 to 111 cover the 16 weeks.<br>Phase 1: Days 0–41. Phase 2: Days 42–76. Phase 3: Days 77–111. The Phase 2 and 3 boundaries are assumed.</p>
+      <p class="muted" style="margin:12px 0 0">Every day: 10-minute mobility routine.<br>Each 7-day block, starting at Day 0: Lift A, Lift B, off, Lift C, Lift D, then two cardio days.</p>
+      <p class="muted" style="margin:12px 0 0">There are no missed-day counts. Log any day number at any time.</p>
     </div>
     <div class="card">
-      <h2>Privacy</h2>
-      <p class="muted" style="margin:0">The web app URL is stored only in this browser. Anyone who has the URL can add rows to your sheet, so keep it private.</p>
+      <div class="eyebrow">Privacy</div>
+      <p class="muted" style="margin:8px 0 0">The web app URL is stored only on this device. Anyone who has the URL can add rows to your sheet, so keep it private.</p>
     </div>
     <script type="text/plain" id="gsCode">// Fitness Tracker sync. Paste into Extensions > Apps Script of the tracker sheet.
 // Deploy: Deploy > New deployment > Web app > Execute as: Me > Who has access: Anyone.
@@ -239,9 +261,9 @@ function saveBody_(d) {
   // Position within each 7-day block, counted from Day 0.
   var LIFT_AT = { 0: 'A', 1: 'B', 3: 'C', 4: 'D' };
   var RUNWALK = 'Cardio: run/walk, 1 min jog then 2 min walk, 20 min total. Keep heart rate under 145 BPM.';
-  var ZONE2 = 'Cardio: Zone 2 run at 135-150 BPM, 3-6 miles.';
+  var ZONE2 = 'Cardio: Zone 2 run at 135–150 BPM, 3–6 miles.';
   var CARDIO = { 2: { 5: RUNWALK, 6: RUNWALK }, 3: { 2: ZONE2, 5: ZONE2, 6: ZONE2 } };
-  var MOBILITY = ['Iron Neck 360 (8/dir)', 'Cat-Cow (5)', "Child's Pose Lat Reach (5/side)", 'Couch Stretch - Bench (2x45s/side)', 'Couch Stretch - Wall (2x45s/side)', 'Pec Stretch on Rack (2x30s/side)', 'Scap Wall Slide Flat (2x12)', 'Scap Wall Slide + Band (2x10)'];
+  var MOBILITY = ['Iron Neck 360 (8/dir)', 'Cat-Cow (5)', "Child's Pose Lat Reach (5/side)", 'Couch Stretch – Bench (2×45s/side)', 'Couch Stretch – Wall (2×45s/side)', 'Pec Stretch on Rack (2×30s/side)', 'Scap Wall Slide Flat (2×12)', 'Scap Wall Slide + Band (2×10)'];
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -259,7 +281,6 @@ function saveBody_(d) {
   var targets = store.get('ft_targets', {});
   var queue = store.get('ft_queue', []);
 
-  // Day numbers are whole days since Day 0.
   function dayFromDate(date) {
     return Math.floor((new Date(date + 'T12:00:00') - new Date(cfg.start + 'T12:00:00')) / 86400000);
   }
@@ -281,8 +302,14 @@ function saveBody_(d) {
     var week = weekOf(n), phase = phaseOf(week);
     var pos = n % 7;
     $('dayNum').value = n;
-    $('phaseLine').textContent = 'Day ' + n + ' of ' + (TOTAL_DAYS - 1) + ' · Week ' + week + ' · Phase ' + phase;
-    $('dayInfo').textContent = date;
+    $('phaseLine').textContent = 'Week ' + week + ' · Phase ' + phase;
+    $('progressBar').style.width = ((n + 1) / TOTAL_DAYS * 100).toFixed(1) + '%';
+    $('dayInfo').textContent = 'of 111 · ' + new Date(date + 'T12:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' });
+    renderMobility(date);
+
+    var cardio = CARDIO[phase] && CARDIO[phase][pos];
+    $('cardioBox').innerHTML = cardio ? '<div class="cardio">' + esc(cardio) + '</div>' : '';
+
     var box = $('todayBody');
     box.innerHTML = '';
     if (!plan.length) {
@@ -290,18 +317,20 @@ function saveBody_(d) {
       return;
     }
     var letter = LIFT_AT[pos];
-    var cardio = CARDIO[phase] && CARDIO[phase][pos];
     if (!letter) {
-      box.innerHTML = '<div class="card"><h2>Off day</h2><p class="muted" style="margin:0">' + (cardio ? esc(cardio) : 'Nothing scheduled. Rest and recover.') + '</p></div>';
+      box.innerHTML = '<div class="card"><div class="eyebrow">Off day</div><h2>Recover</h2><p class="muted" style="margin:6px 0 0">No lifting scheduled.</p></div>';
       return;
     }
     var key = PHASE_PREFIX[phase] + 'Day ' + letter;
     var exs = plan.filter(function (p) { return p.day === key; });
-    if (cardio) box.insertAdjacentHTML('beforeend', '<div class="card muted">' + esc(cardio) + '</div>');
-    exs.forEach(function (p) { box.appendChild(exerciseCard(p, key, date, week)); });
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="eyebrow">Lift ' + esc(letter) + ' · ' + exs.length + ' exercises</div><h2>' + esc(key.replace(/^P\d /, '')) + ' session</h2>';
+    box.appendChild(card);
+    exs.forEach(function (p) { card.appendChild(exerciseBlock(p, key, date, week)); });
   }
 
-  function exerciseCard(p, key, date, week) {
+  function exerciseBlock(p, key, date, week) {
     var target = targets[p.name];
     var hasTarget = target !== undefined && target !== '';
     var n = parseInt(p.sets, 10) || 3;
@@ -314,19 +343,19 @@ function saveBody_(d) {
         '<input inputmode="numeric" data-f="pain" aria-label="Set ' + s + ' pain">' +
         '</div>';
     }
-    var card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = '<h2>' + esc(p.name) + '</h2>' +
-      '<div class="muted">' + esc(p.equipment) + '</div>' +
-      '<div class="muted">' + esc(p.sets) + ' sets · ' + esc(p.reps) + ' reps · rest ' + esc(p.rest) + ' · tempo ' + esc(p.tempo) + '</div>' +
-      '<div class="muted">Start: ' + esc(p.load) + ' · Next target: ' + (hasTarget ? esc(target) + ' lb' : 'not set yet') + '</div>' +
-      '<div style="margin-top:8px">' + rows + '</div>' +
-      '<div style="margin-top:10px"><button class="btn" data-save>Save ' + esc(p.name) + '</button><span class="status" data-status></span></div>';
-    var btn = card.querySelector('[data-save]');
-    var st = card.querySelector('[data-status]');
+    var el = document.createElement('div');
+    el.className = 'ex';
+    el.innerHTML = '<h2>' + esc(p.name) + '</h2>' +
+      '<div class="meta">' + esc(p.equipment) + '</div>' +
+      '<div class="meta">' + esc(p.sets) + ' sets · ' + esc(p.reps) + ' reps · rest ' + esc(p.rest) + ' · tempo ' + esc(p.tempo) + '</div>' +
+      '<span class="target">' + (hasTarget ? 'Target ' + esc(target) + ' lb' : 'Start ' + esc(p.load)) + '</span>' +
+      rows +
+      '<div class="row-actions"><button class="btn" data-save>Save</button><span class="status" data-status></span></div>';
+    var btn = el.querySelector('[data-save]');
+    var st = el.querySelector('[data-status]');
     btn.onclick = function () {
       var count = 0;
-      card.querySelectorAll('.sets:not(.hdr)').forEach(function (row, i) {
+      el.querySelectorAll('.sets:not(.hdr)').forEach(function (row, i) {
         var g = function (f) { return row.querySelector('[data-f="' + f + '"]').value.trim(); };
         var reps = g('reps');
         if (!reps) return;
@@ -336,29 +365,37 @@ function saveBody_(d) {
       if (!count) { st.textContent = 'Enter reps for at least one set.'; st.classList.add('warn'); return; }
       st.classList.remove('warn');
       store.set('ft_queue', queue);
-      st.textContent = 'Saved ' + count + ' set(s) on this device.';
+      st.textContent = 'Saved ' + count + ' set(s).';
       btn.disabled = true;
       sync();
     };
-    card.addEventListener('input', function () { btn.disabled = false; });
-    return card;
+    el.addEventListener('input', function () { btn.disabled = false; });
+    return el;
   }
 
-  function renderMobility() {
+  // Mobility is the same every day, so each day's checks are kept on the device by day number.
+  function renderMobility(date) {
+    var saved = store.get('ft_mob_' + selectedDay, { checks: [], minutes: '10', notes: '' });
     $('mobList').innerHTML = MOBILITY.map(function (m, i) {
-      return '<label class="chk"><input type="checkbox" data-m="' + i + '"><span>' + esc(m) + '</span></label>';
+      var on = !!saved.checks[i];
+      return '<label class="chk' + (on ? ' done' : '') + '"><input type="checkbox" data-m="' + i + '"' + (on ? ' checked' : '') + '><span>' + esc(m) + '</span></label>';
     }).join('');
+    $('mobList').querySelectorAll('[data-m]').forEach(function (cb) {
+      cb.onchange = function () { cb.parentElement.classList.toggle('done', cb.checked); };
+    });
+    $('mobMin').value = saved.minutes;
+    $('mobNotes').value = saved.notes;
+    $('mobStatus').textContent = '';
   }
 
-  function setSync(msg) { $('syncLine').textContent = msg; }
+  function setSync(msg) { /* status is shown in the header line when present */ }
 
   var syncing = false;
   async function sync() {
-    if (!cfg.url) { setSync('Not connected. Add your web app URL in Settings.'); return; }
+    if (!cfg.url) return;
     if (syncing) return;
-    if (!queue.length) { setSync('All data synced.'); await refreshPlan(); return; }
+    if (!queue.length) { await refreshPlan(); return; }
     syncing = true;
-    setSync('Syncing ' + queue.length + ' item(s)…');
     try {
       var res = await fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ items: queue }) });
       var j = await res.json();
@@ -367,10 +404,9 @@ function saveBody_(d) {
       (j.done || []).forEach(function (id) { done[id] = true; });
       queue = queue.filter(function (q) { return !done[q.id]; });
       store.set('ft_queue', queue);
-      if (queue.length) setSync(queue.length + ' item(s) waiting to sync. Will retry.');
-      else { setSync('All data synced at ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })); await refreshPlan(); }
+      if (!queue.length) await refreshPlan();
     } catch (err) {
-      setSync('Saved on this device. Will retry (' + err.message + ').');
+      // Stays on the device and retries on the next sync.
     } finally {
       syncing = false;
     }
@@ -402,7 +438,10 @@ function saveBody_(d) {
   $('mobSave').onclick = function () {
     var checks = [];
     document.querySelectorAll('[data-m]').forEach(function (cb) { checks.push(cb.checked); });
-    queueItem('mobility', { date: dateFromDay(dayFieldValue('mobDay')), checks: checks, minutes: $('mobMin').value, notes: $('mobNotes').value }, $('mobStatus'));
+    var minutes = $('mobMin').value;
+    var notes = $('mobNotes').value;
+    store.set('ft_mob_' + selectedDay, { checks: checks, minutes: minutes, notes: notes });
+    queueItem('mobility', { date: dateFromDay(selectedDay), checks: checks, minutes: minutes, notes: notes }, $('mobStatus'));
   };
 
   $('bodySave').onclick = function () {
@@ -436,7 +475,7 @@ function saveBody_(d) {
   document.querySelectorAll('[data-view]').forEach(function (b) {
     b.onclick = function () {
       document.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
-      ['today', 'mobility', 'body', 'settings'].forEach(function (v) { $('view-' + v).classList.toggle('hidden', v !== b.dataset.view); });
+      ['today', 'body', 'settings'].forEach(function (v) { $('view-' + v).classList.toggle('hidden', v !== b.dataset.view); });
     };
   });
 
@@ -448,12 +487,9 @@ function saveBody_(d) {
   $('nextDay').onclick = function () { setDay(selectedDay + 1); };
   $('dayNum').onchange = function () { setDay($('dayNum').value === '' ? selectedDay : $('dayNum').value); };
 
-  // Initial values
   $('cfgUrl').value = cfg.url;
   $('cfgStart').value = cfg.start;
-  $('mobDay').value = selectedDay;
   $('bodyDay').value = selectedDay;
-  renderMobility();
   renderToday();
   sync();
 
