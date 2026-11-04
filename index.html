@@ -276,7 +276,9 @@ function saveBody_(d) {
     set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
 
+  var DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzuK4ZC3mcr4sb2D60E0auwk5wO7DWy9m0v7EJxn75ZkjUHb19nfhM7UuHsRIVnzHhG/exec';
   var cfg = store.get('ft_cfg', { url: '', start: '2026-11-03' });
+  if (!cfg.url) cfg.url = DEFAULT_URL;
   var plan = store.get('ft_plan', []);
   var targets = store.get('ft_targets', {});
   var queue = store.get('ft_queue', []);
