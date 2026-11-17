@@ -1,0 +1,255 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Movement Assessment</title>
+<style>
+:root{--bg:#f4f3ee;--card:#ffffff;--fg:#1d1e1b;--muted:#6d6e66;--line:#e4e2da;--accent:#2f6b50;--accent-soft:#e3efe8;--accent-fg:#ffffff;--warn:#9a4a2a;--radius:14px;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121410;--card:#1c1f1a;--fg:#eceae3;--muted:#9b9d93;--line:#2e322b;--accent:#86c9a6;--accent-soft:#213228;--accent-fg:#0f2318;--warn:#ec9f7f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121410;--card:#1c1f1a;--fg:#eceae3;--muted:#9b9d93;--line:#2e322b;--accent:#86c9a6;--accent-soft:#213228;--accent-fg:#0f2318;--warn:#ec9f7f;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-font-smoothing:antialiased}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 12px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;font-weight:650}
+h2{font-size:16px;margin:0 0 4px;font-weight:650}
+.muted{color:var(--muted);font-size:13px}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 4px}
+main{padding-block:12px 48px;max-width:680px;margin:0 auto;min-width:0}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 1px 0 var(--line);min-width:0}
+.test{padding-block:14px}
+.test + .test{border-top:1px solid var(--line)}
+.how{font-size:14px;margin:6px 0 10px}
+.guide{font-size:12.5px;color:var(--muted);margin:0 0 10px;padding-left:16px}
+select,input{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);width:100%}
+label.field{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+.btn{background:var(--accent);color:var(--accent-fg);border:0;border-radius:10px;padding:12px 18px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+.btn:disabled{opacity:.45}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bars{display:grid;gap:10px;margin-top:12px}
+.bar-row{display:grid;grid-template-columns:90px 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.bar{height:10px;background:var(--line);border-radius:8px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.bar-row.weak .bar span{background:var(--warn)}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.focus{margin-top:14px;padding:14px;border-radius:var(--radius);background:var(--accent-soft)}
+.focus h3{font-size:15px;margin:0 0 6px}
+.focus ul{margin:6px 0 0;padding-left:18px;font-size:14px}
+.row-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.status{font-size:13px;color:var(--muted)}
+.hidden{display:none}
+.hist{font-size:13px;padding:8px 0;border-top:1px solid var(--line)}
+.hist:first-child{border-top:0}
+.warnbox{font-size:13px;color:var(--warn);margin:0}
+.tabs{display:flex;gap:6px;margin-top:12px}
+.tabs button{flex:1;border:0;background:var(--card);color:var(--muted);border-radius:10px;padding:9px 0;font:inherit;font-size:14px;font-weight:550;cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--accent)}
+</style>
+
+<header>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+    <h1>Movement Assessment</h1>
+    <span class="muted" id="dayLine"></span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-view="test" aria-selected="true">Assess</button>
+    <button role="tab" data-view="history" aria-selected="false">History</button>
+  </nav>
+</header>
+
+<main>
+  <section id="view-test">
+    <div class="card">
+      <div class="eyebrow">Before you start</div>
+      <h2>Score each movement honestly</h2>
+      <p class="muted" style="margin:8px 0 0">Film each movement on your phone from the side and front so you can check it later. Use 3 for clean, full, controlled reps. Score the worse side when a test is one-sided. This is a fitness screen, not a medical assessment. If any movement causes sharp pain, skip it, score 0, and say so in the notes.</p>
+      <label class="field" style="margin:14px 0 0">Day number<input type="number" id="day" min="0" max="111" inputmode="numeric"></label>
+    </div>
+    <div id="tests"></div>
+    <div class="card">
+      <label class="field" style="margin:0">Notes (what felt hard or uneven)<input type="text" id="notes"></label>
+      <div class="row-actions">
+        <button class="btn" id="score">Score and save</button>
+        <span class="status" id="status"></span>
+      </div>
+    </div>
+    <div class="card hidden" id="results"></div>
+  </section>
+
+  <section id="view-history" class="hidden">
+    <div class="card" id="historyBox"><p class="muted" style="margin:0">No assessments saved yet.</p></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbzuK4ZC3mcr4sb2D60E0auwk5wO7DWy9m0v7EJxn75ZkjUHb19nfhM7UuHsRIVnzHhG/exec';
+  var START = '2026-11-03';
+  var TOTAL = 112;
+  var RETEST = [0, 28, 56, 84, 111];
+
+  var GROUPS = ['Mobility', 'Squat', 'Hinge', 'Push', 'Pull', 'Core', 'Balance'];
+  var TESTS = [
+    { id: 'ankle', g: 'Mobility', name: 'Ankle: knee to wall', how: 'Face a wall in a half-kneel with your front foot about 5 inches from it. Drive your knee forward to touch the wall while the heel stays down.', guide: ['3: Knee touches at 5 inches, heel down', '2: Knee touches at 4 inches', '1: Knee touches at 3 inches or less', '0: Heel lifts or knee cannot reach'] },
+    { id: 'shoulder', g: 'Mobility', name: 'Overhead reach', how: 'Stand with your back against a wall, arms straight overhead, lower back flat against the wall.', guide: ['3: Arms reach overhead with back flat', '2: Arms reach but the lower back lifts', '1: Arms reach only partway', '0: Arms cannot reach overhead'] },
+    { id: 'hamstring', g: 'Mobility', name: 'Hamstring reach', how: 'Stand with legs straight and reach toward your toes.', guide: ['3: Palms flat on the floor, legs straight', '2: Fingertips reach the floor', '1: Hands reach mid-shin', '0: Hands stop above the knee'] },
+    { id: 'thoracic', g: 'Mobility', name: 'Seated rotation', how: 'Sit tall with arms crossed on your chest. Turn to each side while your hips stay still.', guide: ['3: Full turn both sides, hips still', '2: One side limited', '1: Both sides limited', '0: Hips move to help the turn'] },
+    { id: 'squat', g: 'Squat', name: 'Bodyweight squat, 10 slow reps', how: 'Feet shoulder-width, toes slightly out. Squat to full depth with the chest up.', guide: ['3: Heels down, chest up, no wobble', '2: One fault, such as heels lifting or knees caving', '1: Two faults', '0: Cannot complete 10 reps'] },
+    { id: 'hinge', g: 'Hinge', name: 'Hip hinge with a dowel, 10 reps', how: 'Hold a dowel touching your head, back, and tailbone. Push the hips back, keeping the dowel in contact.', guide: ['3: Dowel stays in contact, back flat', '2: One fault', '1: Back rounds or dowel leaves contact', '0: Cannot complete'] },
+    { id: 'push', g: 'Push', name: 'Push-up, full range', how: 'Chest to the floor, body in a straight line.', guide: ['3: 10 or more full reps', '2: 5 to 9 full reps', '1: 1 to 4 full reps, or on knees', '0: Cannot do a rep'] },
+    { id: 'pull', g: 'Pull', name: 'Pull (pull-up, or band or door row)', how: 'Pull-up from a dead hang with a strict, controlled rep. If you can’t do one, use a band or door row.', guide: ['3: 8 or more strict pull-ups', '2: 3 to 7 strict pull-ups', '1: 1 to 2 pull-ups, or band row only', '0: Cannot pull'] },
+    { id: 'core', g: 'Core', name: 'Dead bug, 10 reps each side', how: 'On your back, arms up and knees bent at 90 degrees. Slowly extend one arm and the opposite leg while your low back stays flat.', guide: ['3: No back arch, controlled', '2: Slight arch', '1: Large arch', '0: Cannot complete'] },
+    { id: 'plank', g: 'Core', name: 'Front plank hold', how: 'Forearms and toes on the floor, body in a straight line. Time the hold.', guide: ['3: 60 seconds or more', '2: 30 to 59 seconds', '1: 15 to 29 seconds', '0: Under 15 seconds'] },
+    { id: 'balance', g: 'Balance', name: 'Single-leg stand, eyes closed', how: 'Stand on one leg with eyes closed. Time it on each leg and score the worse leg.', guide: ['3: 30 seconds or more', '2: 15 to 29 seconds', '1: 5 to 14 seconds', '0: Under 5 seconds'] }
+  ];
+
+  var PLAN = {
+    Mobility: { exercises: 'Standing Tibialis Raises, Couch Stretch, Cat-Cow, Child’s Pose Lat Reach', note: 'Do the daily 10-minute routine on the Today screen every day. Work the ankle and hamstring reach before lifting.' },
+    Squat: { exercises: 'Goblet Box Squats, Bulgarian Split Squats, Barbell Back Box Squat', note: 'Work at a lighter load until every rep is a clean 3 out of 3.' },
+    Hinge: { exercises: 'Kettlebell Romanian Deadlift, Barbell Romanian Deadlift', note: 'Keep the back flat and the hinge slow. Add load only once form is clean.' },
+    Push: { exercises: 'Barbell Incline Rack Push-Ups, Incline DB Bench Press, Dip Station Full Bodyweight Dips', note: 'Use the easier variation until you can do full-range reps with a straight body.' },
+    Pull: { exercises: 'Wide-Grip Lat Pulldown, Single-Arm Cable Low Row, Strict Pull-Ups', note: 'Pull through the full range and control the lowering. Use a band if you can’t do a strict pull-up yet.' },
+    Core: { exercises: 'Cable Pallof Press, Mat Sit-Ups with Pause, Hanging Knee Raises', note: 'Keep the low back still during every rep. Quality beats speed.' },
+    Balance: { exercises: 'Single-Leg Kettlebell RDL, Standing Tibialis Wall Raises (Single-Leg)', note: 'Practice single-leg work with a wall or rack nearby until the stand is steady.' }
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+  var store = {
+    get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  var url = store.get('as_url', DEFAULT_URL);
+  var queue = store.get('as_queue', []);
+  var history = store.get('as_history', []);
+
+  function dayFromToday() {
+    return Math.max(0, Math.floor((new Date(iso(new Date()) + 'T12:00:00') - new Date(START + 'T12:00:00')) / 86400000));
+  }
+  function nextRetest(d) {
+    for (var i = 0; i < RETEST.length; i++) if (RETEST[i] >= d) return RETEST[i];
+    return null;
+  }
+
+  var selectedDay = dayFromToday();
+  $('day').value = selectedDay;
+  $('dayLine').textContent = 'Day ' + selectedDay + ' of 111';
+
+  // Build test cards
+  var html = '';
+  GROUPS.forEach(function (g) {
+    var items = TESTS.filter(function (t) { return t.g === g; });
+    html += '<div class="card"><div class="eyebrow">' + esc(g) + '</div>';
+    items.forEach(function (t) {
+      html += '<div class="test"><h2>' + esc(t.name) + '</h2><p class="how">' + esc(t.how) + '</p>' +
+        '<ul class="guide">' + t.guide.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+        '<label class="field" style="margin:0">Score<select data-test="' + t.id + '"><option value="">Choose</option><option value="3">3</option><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></label></div>';
+    });
+    html += '</div>';
+  });
+  $('tests').innerHTML = html;
+
+  function scoreAll() {
+    var scores = {}, missing = [];
+    TESTS.forEach(function (t) {
+      var v = document.querySelector('[data-test="' + t.id + '"]').value;
+      if (v === '') missing.push(t.name);
+      else scores[t.id] = Number(v);
+    });
+    return { scores: scores, missing: missing };
+  }
+
+  function groupPcts(scores) {
+    var out = {};
+    GROUPS.forEach(function (g) {
+      var vals = TESTS.filter(function (t) { return t.g === g; }).map(function (t) { return scores[t.id]; });
+      var sum = vals.reduce(function (a, b) { return a + b; }, 0);
+      out[g] = Math.round(sum / (vals.length * 3) * 100);
+    });
+    return out;
+  }
+
+  function renderResults(pcts, weakest, dayN) {
+    var sorted = GROUPS.slice().sort(function (a, b) { return pcts[a] - pcts[b]; });
+    var weakTwo = sorted.slice(0, 2);
+    var bars = GROUPS.map(function (g) {
+      var weak = weakTwo.indexOf(g) !== -1;
+      return '<div class="bar-row' + (weak ? ' weak' : '') + '"><span>' + esc(g) + '</span><div class="bar"><span style="width:' + pcts[g] + '%"></span></div><span class="num">' + pcts[g] + '%</span></div>';
+    }).join('');
+    var focus = weakTwo.map(function (g) {
+      return '<h3>' + esc(g) + ' (' + pcts[g] + '%)</h3><p class="muted" style="margin:0">' + esc(PLAN[g].note) + '</p><ul><li>Plan exercises: ' + esc(PLAN[g].exercises) + '</li></ul>';
+    }).join('');
+    var nr = nextRetest(dayN);
+    $('results').classList.remove('hidden');
+    $('results').innerHTML = '<div class="eyebrow">Results</div><h2>Your weakest areas</h2>' +
+      '<div class="bars">' + bars + '</div>' +
+      '<div class="focus"><div class="eyebrow">Focus for the next block</div>' + focus + '</div>' +
+      '<p class="muted" style="margin:12px 0 0">' + (nr === null ? 'This was your last scheduled screen.' : (nr === dayN ? 'Retest today.' : 'Next retest: Day ' + nr + '.')) + ' Retests are on Days 0, 28, 56, 84 and 111.</p>';
+    $('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderHistory() {
+    if (!history.length) { $('historyBox').innerHTML = '<p class="muted" style="margin:0">No assessments saved yet.</p>'; return; }
+    $('historyBox').innerHTML = '<div class="eyebrow">Saved on this device</div>' + history.slice().reverse().map(function (h) {
+      return '<div class="hist"><strong>Day ' + h.day + '</strong> · ' + esc(h.date) + '<br>' +
+        GROUPS.map(function (g) { return g + ' ' + h.pcts[g] + '%'; }).join(' · ') + '</div>';
+    }).join('');
+  }
+
+  $('score').onclick = function () {
+    var r = scoreAll();
+    if (r.missing.length) {
+      $('status').textContent = 'Score every test first. Missing: ' + r.missing.length + '.';
+      $('status').style.color = 'var(--warn)';
+      return;
+    }
+    $('status').style.color = '';
+    var day = Math.min(111, Math.max(0, Number($('day').value) || 0));
+    var date = iso(new Date(START + 'T12:00:00'));
+    var d = new Date(START + 'T12:00:00'); d.setDate(d.getDate() + day); date = iso(d);
+    var pcts = groupPcts(r.scores);
+    var weakest = GROUPS.slice().sort(function (a, b) { return pcts[a] - pcts[b]; }).slice(0, 2).join(', ');
+    var entry = { id: uid(), day: day, date: date, pcts: pcts, weakest: weakest, scores: r.scores, notes: $('notes').value };
+    history.push(entry);
+    store.set('as_history', history);
+    queue.push({ id: uid(), type: 'assessment', data: { tag: 'assess:' + entry.id, date: date, day: day, pcts: GROUPS.map(function (g) { return pcts[g]; }), weakest: weakest, scores: JSON.stringify(r.scores), notes: entry.notes } });
+    store.set('as_queue', queue);
+    renderResults(pcts, weakest, day);
+    renderHistory();
+    $('status').textContent = 'Saved on this device. Sending to the sheet…';
+    sync();
+  };
+
+  var syncing = false;
+  async function sync() {
+    if (!url || syncing || !queue.length) return;
+    syncing = true;
+    try {
+      var res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ items: queue }) });
+      var j = await res.json();
+      if (j.error) throw new Error(j.error);
+      var done = {};
+      (j.done || []).forEach(function (id) { done[id] = true; });
+      queue = queue.filter(function (q) { return !done[q.id]; });
+      store.set('as_queue', queue);
+      $('status').textContent = queue.length ? 'Saved on this device. Will retry.' : 'Saved to your sheet.';
+    } catch (err) {
+      $('status').textContent = 'Saved on this device. Will retry.';
+    } finally {
+      syncing = false;
+    }
+  }
+
+  document.querySelectorAll('[data-view]').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('[data-view]').forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      ['test', 'history'].forEach(function (v) { $('view-' + v).classList.toggle('hidden', v !== b.dataset.view); });
+      if (b.dataset.view === 'history') renderHistory();
+    };
+  });
+
+  renderHistory();
+  sync();
+  setInterval(sync, 15 * 60 * 1000);
+  window.addEventListener('online', sync);
+})();
+</script>

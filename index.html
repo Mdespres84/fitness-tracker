@@ -169,6 +169,7 @@ function doPost(e) {
         if (item.type === 'set') saveSet_(item);
         if (item.type === 'mobility') saveMobility_(item.data);
         if (item.type === 'body') saveBody_(item.data);
+        if (item.type === 'assessment') saveAssessment_(item.data);
         done.push(item.id);
       } catch (err) {
         // Not marked done, so the page will retry it on the next sync.
@@ -243,6 +244,18 @@ function upsert_(sh, date, vals) {
 
 function saveMobility_(d) {
   upsert_(sheet_('Mobility'), d.date, [dateObj_(d.date)].concat(d.checks, [d.minutes === '' ? '' : Number(d.minutes), d.notes || '']));
+}
+
+// Movement assessment results go to an Assessment tab, created on first use. Tag column dedupes retries.
+function saveAssessment_(d) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Assessment') || ss.insertSheet('Assessment');
+  if (sh.getLastRow() === 0) {
+    sh.appendRow(['Date', 'Day', 'Tag', 'Mobility %', 'Squat %', 'Hinge %', 'Push %', 'Pull %', 'Core %', 'Balance %', 'Weakest areas', 'Scores (JSON)', 'Notes']);
+  }
+  var last = sh.getLastRow();
+  if (last > 1 && sh.getRange(2, 3, last - 1, 1).getValues().some(function (r) { return r[0] === d.tag; })) return;
+  sh.appendRow([dateObj_(d.date), Number(d.day), d.tag].concat(d.pcts, [d.weakest, d.scores, d.notes || '']));
 }
 
 function saveBody_(d) {
